@@ -493,17 +493,63 @@ int pieceTextureIndex(int p) {
 
 void drawPiece(sf::RenderWindow& window, const std::array<sf::Texture, 12>& textures,
                int p, float x, float y, float size) {
-  sf::Sprite sprite(textures[pieceTextureIndex(p)]);
-  sprite.setScale({size / 128.f, size / 128.f});
-  sprite.setPosition({x, y});
+  const sf::Texture& texture = textures[pieceTextureIndex(p)];
+  const sf::Vector2u textureSize = texture.getSize();
+  if (textureSize.x == 0 || textureSize.y == 0)
+    return;
+
+  sf::Sprite sprite(texture);
+  const float scale =
+      size / static_cast<float>(std::max(textureSize.x, textureSize.y));
+  sprite.setScale({scale, scale});
+  const float renderedWidth = static_cast<float>(textureSize.x) * scale;
+  const float renderedHeight = static_cast<float>(textureSize.y) * scale;
+  sprite.setPosition({x + (size - renderedWidth) / 2.f,
+                      y + (size - renderedHeight) / 2.f});
   window.draw(sprite);
 }
 
 void gui() {
+  constexpr unsigned layoutWidth = 1088, layoutHeight = 760;
   constexpr float bx = 48.f, by = 78.f, tile = 76.f, boardSize = tile * 8.f;
   constexpr float panelX = 700.f, panelW = 350.f;
-  sf::RenderWindow window(sf::VideoMode({1088u, 760u}), "Chess — Local two-player",
-                          sf::Style::Titlebar | sf::Style::Close);
+  const sf::Vector2u desktopSize = sf::VideoMode::getDesktopMode().size;
+  const float initialScale = std::min(
+      {1.f, 0.9f * static_cast<float>(desktopSize.x) / layoutWidth,
+       0.9f * static_cast<float>(desktopSize.y) / layoutHeight});
+  const sf::Vector2u initialSize{
+      std::max(1u, static_cast<unsigned>(layoutWidth * initialScale)),
+      std::max(1u, static_cast<unsigned>(layoutHeight * initialScale))};
+  sf::RenderWindow window(sf::VideoMode(initialSize), "Chess — Local two-player",
+                          sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
+
+  sf::View gameView(sf::FloatRect({0.f, 0.f},
+                                  {static_cast<float>(layoutWidth),
+                                   static_cast<float>(layoutHeight)}));
+  auto updateViewport = [&](sf::Vector2u windowSize) {
+    if (windowSize.x == 0 || windowSize.y == 0)
+      return;
+
+    const float windowRatio = static_cast<float>(windowSize.x) /
+                              static_cast<float>(windowSize.y);
+    const float layoutRatio = static_cast<float>(layoutWidth) /
+                              static_cast<float>(layoutHeight);
+    sf::FloatRect viewport;
+    if (windowRatio > layoutRatio) {
+      viewport.size = {layoutRatio / windowRatio, 1.f};
+      viewport.position = {(1.f - viewport.size.x) / 2.f, 0.f};
+    } else {
+      viewport.size = {1.f, windowRatio / layoutRatio};
+      viewport.position = {0.f, (1.f - viewport.size.y) / 2.f};
+    }
+    gameView.setViewport(viewport);
+    window.setView(gameView);
+  };
+  updateViewport(window.getSize());
+
+  const int centeredX = static_cast<int>((desktopSize.x - initialSize.x) / 2);
+  const int centeredY = static_cast<int>((desktopSize.y - initialSize.y) / 2);
+  window.setPosition({centeredX, centeredY});
   window.setFramerateLimit(60);
   sf::Font font;
   const std::string assetRoot = CHESS_ASSET_DIR;
@@ -596,6 +642,8 @@ void gui() {
     while (const std::optional event = window.pollEvent()) {
       if (event->is<sf::Event::Closed>())
         window.close();
+      if (const auto* resized = event->getIf<sf::Event::Resized>())
+        updateViewport(resized->size);
       if (const auto* keyEvent = event->getIf<sf::Event::KeyPressed>()) {
         if (keyEvent->code == sf::Keyboard::Key::Escape)
           window.close();
@@ -620,7 +668,8 @@ void gui() {
       if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>()) {
         if (mouse->button != sf::Mouse::Button::Left)
           continue;
-        const int mx = mouse->position.x, my = mouse->position.y;
+        const sf::Vector2f mousePosition = window.mapPixelToCoords(mouse->position);
+        const float mx = mousePosition.x, my = mousePosition.y;
         if (mx >= panelX && mx < panelX + panelW && my >= 650 && my < 702) {
           reset();
           continue;
@@ -720,8 +769,7 @@ void gui() {
       if (b.sq[s]) {
         int df = flipped ? 7 - fileOf(s) : fileOf(s),
             dr = flipped ? rankOf(s) : 7 - rankOf(s);
-        drawPiece(window, textures, b.sq[s], bx + df * tile + 2, by + dr * tile + 2,
-                  tile - 4);
+        drawPiece(window, textures, b.sq[s], bx + df * tile, by + dr * tile, tile);
       }
     for (int i = 0; i < 8; ++i) {
       drawText(window, font, std::string(1, char('a' + (flipped ? 7 - i : i))),
@@ -784,7 +832,8 @@ void gui() {
     button(panelX, 708, 350, 44, "Flip board  F", flipped);
 
     if (choosingPromotion) {
-      sf::RectangleShape shade({1088.f, 760.f});
+      sf::RectangleShape shade({static_cast<float>(layoutWidth),
+                                static_cast<float>(layoutHeight)});
       shade.setFillColor(sf::Color(10, 13, 17, 175));
       window.draw(shade);
       sf::RectangleShape popup({330.f, 112.f});
@@ -810,3 +859,6 @@ int main() {
   gui();
   return 0;
 }
+
+
+
