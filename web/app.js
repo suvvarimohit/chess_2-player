@@ -491,7 +491,7 @@ async function start() {
       resizeCanvas();
       draw();
     });
-    canvas.addEventListener("pointerdown", handleClick);
+    canvas.addEventListener("click", handleClick);
     window.addEventListener("keydown", handleKey);
   } catch (error) {
     loading.textContent = `Could not start chess: ${error.message}`;
