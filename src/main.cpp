@@ -79,5 +79,13 @@ struct Board {
         return s;
       return -1;
   }
-  
+  bool attacked(int target, int by) const {
+    int tf = fileOf(target), tr = rankOf(target);
+    int pawnRank = tr + (by == WHITE ? -1 : 1);
+    for (int df : {-1, 1})
+      if (inside(tf +df, pawnRank) && sq[square(tf + df, pawnRank)] == (by == WHITE ? PAWN : -PAWN))
+        return true;
+    constexpr int knight[8][2] = {{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}};
+    
+  }
 }
