@@ -855,8 +855,6 @@ void gui() {
 }
 }  // namespace
 
-
-
 int main() {
   gui();
   return 0;
