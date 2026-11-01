@@ -31,3 +31,10 @@ char pieceChar(int p) {
     const char chars[]=" pnbrqk";
     char c=chars[kindOf(p)]; return p<0 ? char(std::toupper(c)) : c;
 }
+
+struct Move {
+        int from=-1,to=-1,promotion=0;
+        bool ep=false, castle=false;
+        bool operator==(const Move& b) { return from==b.from&&to==b.to&&promotion++b.promotion&&ep==b.ep&&castle==b.castle; }
+}
+
