@@ -1,4 +1,8 @@
+#ifdef CHESS_WEB_BUILD
+#include <emscripten/emscripten.h>
+#else
 #include <SFML/Graphics.hpp>
+#endif
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -479,6 +483,164 @@ struct Snapshot {
   std::vector<std::string> positions;
 };
 
+#ifdef CHESS_WEB_BUILD
+
+std::string jsonEscape(const std::string& value) {
+  std::string result;
+  result.reserve(value.size() + 8);
+  for (unsigned char ch : value) {
+    switch (ch) {
+      case '"': result += "\\\""; break;
+      case '\\': result += "\\\\"; break;
+      case '\b': result += "\\b"; break;
+      case '\f': result += "\\f"; break;
+      case '\n': result += "\\n"; break;
+      case '\r': result += "\\r"; break;
+      case '\t': result += "\\t"; break;
+      default:
+        if (ch < 0x20) {
+          constexpr char hex[] = "0123456789abcdef";
+          result += "\\u00";
+          result += hex[ch >> 4];
+          result += hex[ch & 0x0f];
+        } else {
+          result += static_cast<char>(ch);
+        }
+    }
+  }
+  return result;
+}
+
+class WebGame {
+ public:
+  WebGame() { reset(); }
+
+  void reset() {
+    board = Board::start();
+    last = Move{};
+    notation.clear();
+    positions = {key(board)};
+    captured = {};
+    undoStack.clear();
+    rebuildRepetitions();
+  }
+
+  void undo() {
+    if (undoStack.empty())
+      return;
+    Snapshot snapshot = std::move(undoStack.back());
+    undoStack.pop_back();
+    board = snapshot.board;
+    notation = std::move(snapshot.notation);
+    captured = std::move(snapshot.captured);
+    last = snapshot.last;
+    positions = std::move(snapshot.positions);
+    rebuildRepetitions();
+  }
+
+  bool play(int from, int to, int promotion) {
+    if (!terminalState(board, repetitions).empty())
+      return false;
+    for (const Move& move : board.legal()) {
+      if (move.from != from || move.to != to || move.promotion != promotion)
+        continue;
+      commit(move);
+      return true;
+    }
+    return false;
+  }
+
+  std::string state() const {
+    std::ostringstream out;
+    out << "{\"board\":[";
+    for (int i = 0; i < 64; ++i) {
+      if (i) out << ',';
+      out << board.sq[i];
+    }
+    out << "],\"turn\":" << board.turn
+        << ",\"check\":" << (board.inCheck(board.turn) ? "true" : "false")
+        << ",\"status\":\"" << jsonEscape(terminalState(board, repetitions))
+        << "\",\"legal\":[";
+    const std::vector<Move> moves = board.legal();
+    for (std::size_t i = 0; i < moves.size(); ++i) {
+      if (i) out << ',';
+      out << '[' << moves[i].from << ',' << moves[i].to << ','
+          << moves[i].promotion << ']';
+    }
+    out << "],\"history\":[";
+    for (std::size_t i = 0; i < notation.size(); ++i) {
+      if (i) out << ',';
+      out << '"' << jsonEscape(notation[i]) << '"';
+    }
+    out << "],\"captured\":[";
+    for (int side = 0; side < 2; ++side) {
+      if (side) out << ',';
+      out << '[';
+      for (std::size_t i = 0; i < captured[side].size(); ++i) {
+        if (i) out << ',';
+        out << captured[side][i];
+      }
+      out << ']';
+    }
+    out << "],\"last\":[" << last.from << ',' << last.to << "]}";
+    return out.str();
+  }
+
+ private:
+  Board board;
+  Move last;
+  std::vector<std::string> notation;
+  std::vector<std::string> positions;
+  std::array<std::vector<int>, 2> captured;
+  std::vector<Snapshot> undoStack;
+  std::unordered_map<std::string, int> repetitions;
+
+  void rebuildRepetitions() {
+    repetitions.clear();
+    for (const std::string& position : positions)
+      ++repetitions[position];
+  }
+
+  void commit(const Move& move) {
+    const std::string moveText = san(board, move);
+    undoStack.push_back({board, notation, captured, last, positions});
+    const int victim = move.ep
+                           ? board.sq[move.to + (board.turn == WHITE ? -8 : 8)]
+                           : board.sq[move.to];
+    if (victim)
+      captured[board.turn].push_back(kindOf(victim));
+    board.apply(move);
+    notation.push_back(moveText);
+    last = move;
+    positions.push_back(key(board));
+    ++repetitions[key(board)];
+  }
+};
+
+WebGame& webGame() {
+  static WebGame game;
+  return game;
+}
+std::string stateBuffer;
+
+}  // namespace
+
+extern "C" {
+EMSCRIPTEN_KEEPALIVE const char* chess_state_json() {
+  stateBuffer = webGame().state();
+  return stateBuffer.c_str();
+}
+EMSCRIPTEN_KEEPALIVE int chess_play(int from, int to, int promotion) {
+  return webGame().play(from, to, promotion) ? 1 : 0;
+}
+EMSCRIPTEN_KEEPALIVE void chess_reset() { webGame().reset(); }
+EMSCRIPTEN_KEEPALIVE void chess_undo() { webGame().undo(); }
+}
+
+int main() { return 0; }
+
+#else
+
 void drawText(sf::RenderWindow& window, const sf::Font& font, const std::string& value,
               float x, float y, unsigned size, sf::Color color) {
   sf::Text text(font, value, size);
@@ -859,3 +1021,5 @@ int main() {
   gui();
   return 0;
 }
+
+#endif  // CHESS_WEB_BUILD

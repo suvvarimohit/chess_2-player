@@ -10,3 +10,5 @@ Makefile
 *.so
 *.dll
 *.exe
+
+/build-web/
