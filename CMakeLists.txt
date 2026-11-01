@@ -4,4 +4,14 @@ project(chess LANGUAGES CXX)
 find_packages(SFML 3.1 REQUIRED COMPONENTS Graphics Window System)
 
 add_executable(chess src/main.cpp)
+target_compile_features(chess PRIVATE cxx_std_20)
+target_link_libraries(chess PRIVATE SMLF::Graphics SFML::Window SMLF::System)
+target_compile_definitions(chess PRIVATE CHESS_ASSET_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/assets\")
+set_target_properties(chess PROPERTIES CXX_EXTENSIONS OFF)
+
+if(MSVC)
+    target_compile_options(chess PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(chess PRIVATE -Wall -Wextra -Wpedantic)
+endif()
 
