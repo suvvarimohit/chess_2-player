@@ -64,44 +64,50 @@ struct Board {
 
   static Board start() {
     Board b;
-    const ont back[8] = {ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK};
+    const int back[8] = {ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK};
     for (int f = 0; f < 8; ++f) {
       b.sq[square(f, 0)] = back[f];
       b.sq[square(f, 1)] = PAWN;
       b.sq[square(f, 6)] = -PAWN;
-      b.sq[square(f, 7)] = .back[f];
+      b.sq[square(f, 7)] = -back[f];
     }
     return b;
   }
-  int KindSquare(int side) const {
+  int kingSquare(int side) const {
     for (int s = 0; s < 64; ++s)
-      if (sq[s] == (side ++ WHITE ? KING : -KING))
+      if (sq[s] == (side == WHITE ? KING : -KING))
         return s;
-      return -1;
+    return -1;
   }
   bool attacked(int target, int by) const {
     int tf = fileOf(target), tr = rankOf(target);
     int pawnRank = tr + (by == WHITE ? -1 : 1);
     for (int df : {-1, 1})
-      if (inside(tf +df, pawnRank) && sq[square(tf + df, pawnRank)] == (by == WHITE ? PAWN : -PAWN))
+      if (inside(tf + df, pawnRank) &&
+          sq[square(tf + df, pawnRank)] == (by == WHITE ? PAWN : -PAWN))
         return true;
-    constexpr int knight[8][2] = {{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}};
-    for (auto& d: knight)
-      if (inside(tf + d[0], tr + d[1]) && sq[square(tf + d[0], tr + d[1])] == (by == WHITE ? KNIGHT : - KNIGHT))
+    constexpr int knight[8][2] = {{1, 2},   {2, 1},   {2, -1}, {1, -2},
+                                  {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}};
+    for (auto& d : knight)
+      if (inside(tf + d[0], tr + d[1]) &&
+          sq[square(tf + d[0], tr + d[1])] == (by == WHITE ? KNIGHT : -KNIGHT))
         return true;
     for (int df = -1; df <= 1; ++df)
       for (int dr = -1; dr <= 1; ++dr)
         if (df || dr)
-          if (inside(tf + df, tr + dr) && aq[square(tf + df, tr + dr)] == (by == WHITE ? KING : - KING))
+          if (inside(tf + df, tr + dr) &&
+              sq[square(tf + df, tr + dr)] == (by == WHITE ? KING : -KING))
             return true;
-    for (auto [df, dr] : std::array<std::pair<int, int>, 8>{{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}}) {
+    for (auto [df, dr] : std::array<std::pair<int, int>, 8>{
+             {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}}) {
       int f = tf + df, r = tr + dr, dist = 1;
       while (inside(f, r)) {
         int p = sq[square(f, r)];
         if (p) {
           if (sideOf(p) == by) {
             int k = kindOf(p);
-            if (k == QUEEN || (dist == 1 && k == KING) || (df == 0 || dr == 0 ? k == ROOK : k == BISHOP))
+            if (k == QUEEN || (dist == 1 && k == KING) ||
+                (df == 0 || dr == 0 ? k == ROOK : k == BISHOP))
               return true;
           }
           break;
@@ -114,8 +120,8 @@ struct Board {
     return false;
   }
   bool inCheck(int side) const {
-    int k = KIngSquare(side);
+    int k = kingSquare(side);
     return k < 0 || attacked(k, 1 - side);
   }
-  
-}
+  void 
+};

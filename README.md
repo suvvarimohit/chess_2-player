@@ -10,7 +10,7 @@ A graphical, local player-versus-player chess game in C++20 using SFML 3.1. Both
 - Draw detection for threefold repetition, the 50-move rule, and insufficient material
 - Algebraic move history and captured-piece display
 - Undo one move, start a new game, and flip the board
-- Chessnut piece artwork by Alexis Luengas, bundled as transparent PNGs with SVG originals (Apache-2.0; see `assets/pieces/`)
+- Transparent piece sprites based on the reference design sheet, colored for both sides
 - Bundled Adwaita Sans font, with its SIL Open Font License
 
 ## Requirements
