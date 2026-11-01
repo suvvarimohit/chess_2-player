@@ -86,6 +86,32 @@ struct Board {
       if (inside(tf +df, pawnRank) && sq[square(tf + df, pawnRank)] == (by == WHITE ? PAWN : -PAWN))
         return true;
     constexpr int knight[8][2] = {{1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}};
-    
+    for (auto& d: knight)
+      if (inside(tf + d[0], tr + d[1]) && sq[square(tf + d[0], tr + d[1])] == (by == WHITE ? KNIGHT : - KNIGHT))
+        return true;
+    for (int df = -1; df <= 1; ++df)
+      for (int dr = -1; dr <= 1; ++dr)
+        if (df || dr)
+          if (inside(tf + df, tr + dr) && aq[square(tf + df, tr + dr)] == (by == WHITE ? KING : - KING))
+            return true;
+    for (auto [df, dr] : std::array<std::pair<int, int>, 8>{{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}}) {
+      int f = tf + df, r = tr + dr, dist = 1;
+      while (inside(f, r)) {
+        int p = sq[square(f, r)];
+        if (p) {
+          if (sideOf(p) == by) {
+            int k = kindOf(p);
+            if (k == QUEEN || (dist == 1 && k == KING) || (df == 0 || dr == 0 ? k == ROOK : k == BISHOP))
+              return true;
+          }
+          break;
+        }
+        f += df;
+        r += dr;
+        ++dist;
+      }
+    }
+    return false;
   }
+  
 }
