@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
 site_dir="$repo_root/build-web/web"
+release_id="$(git -C "$repo_root" rev-parse --short HEAD)"
 if [[ ! -s "$site_dir/index.html" || ! -s "$site_dir/chess_core.wasm" ]]; then
   printf 'Browser build not found. Build it first with the commands in README.md.\n' >&2
   exit 1
@@ -25,6 +26,12 @@ fi
 
 find "$site_worktree" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
 cp -a "$site_dir"/. "$site_worktree"/
+# Give each deployment fresh asset URLs so mobile browsers do not keep using
+# a cached JavaScript or stylesheet from an older Pages release.
+sed -i \
+  -e "s#\./style\.css#./style.css?v=$release_id#" \
+  -e "s#\./app\.js#./app.js?v=$release_id#" \
+  "$site_worktree/index.html"
 touch "$site_worktree/.nojekyll"
 git -C "$site_worktree" add --all
 
