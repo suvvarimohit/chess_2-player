@@ -123,5 +123,5 @@ struct Board {
     int k = kingSquare(side);
     return k < 0 || attacked(k, 1 - side);
   }
-  void 
+  void pseudo(std::)
 };
