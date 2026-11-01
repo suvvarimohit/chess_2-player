@@ -70,7 +70,7 @@ function resizeCanvas() {
     PANEL_WIDTH = width - sideMargin * 2;
     // Let the board use the phone's width. A short viewport should scroll
     // vertically instead of shrinking the squares to fit the controls too.
-    TILE = Math.min(100, (width - 40) / 8);
+    TILE = Math.min(100, width / 8);
     BOARD_SIZE = TILE * 8;
     BOARD_X = (width - BOARD_SIZE) / 2;
     BOARD_Y = 48;
@@ -181,10 +181,17 @@ function drawBoard() {
   }
 
   for (let i = 0; i < 8; i += 1) {
-    drawText(String.fromCharCode(97 + (flipped ? 7 - i : i)),
-      BOARD_X + i * TILE + TILE - 15, BOARD_Y + BOARD_SIZE + 2, 12, "#414d44");
-    drawText(String(1 + (flipped ? i : 7 - i)), BOARD_X - 19,
-      BOARD_Y + i * TILE + TILE - 18, 12, "#414d44");
+    if (stackedLayout) {
+      drawText(String.fromCharCode(97 + (flipped ? 7 - i : i)),
+        BOARD_X + i * TILE + 4, BOARD_Y + BOARD_SIZE - 15, 11, "#344239", 600);
+      drawText(String(1 + (flipped ? i : 7 - i)), BOARD_X + 4,
+        BOARD_Y + i * TILE + 3, 11, "#344239", 600);
+    } else {
+      drawText(String.fromCharCode(97 + (flipped ? 7 - i : i)),
+        BOARD_X + i * TILE + TILE - 15, BOARD_Y + BOARD_SIZE + 2, 12, "#414d44");
+      drawText(String(1 + (flipped ? i : 7 - i)), BOARD_X - 19,
+        BOARD_Y + i * TILE + TILE - 18, 12, "#414d44");
+    }
   }
 
   context.strokeStyle = "#12161a";
