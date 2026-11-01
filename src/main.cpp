@@ -113,5 +113,9 @@ struct Board {
     }
     return false;
   }
+  bool inCheck(int side) const {
+    int k = KIngSquare(side);
+    return k < 0 || attacked(k, 1 - side);
+  }
   
 }
