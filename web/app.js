@@ -1,13 +1,15 @@
 import createChessModule from "./chess_core.js";
 
-const LOGICAL_WIDTH = 1088;
-const LOGICAL_HEIGHT = 760;
-const BOARD_X = 48;
-const BOARD_Y = 78;
-const TILE = 76;
-const BOARD_SIZE = TILE * 8;
-const PANEL_X = 700;
-const PANEL_WIDTH = 350;
+let LOGICAL_WIDTH = 1088;
+let LOGICAL_HEIGHT = 760;
+let BOARD_X = 48;
+let BOARD_Y = 78;
+let TILE = 76;
+let BOARD_SIZE = TILE * 8;
+let PANEL_X = 700;
+let PANEL_WIDTH = 350;
+let PANEL_Y = 65;
+let stackedLayout = false;
 const PIECE_NAMES = ["pawn", "knight", "bishop", "rook", "queen", "king"];
 const PROMOTIONS = [5, 4, 3, 2];
 const PROMOTION_LABELS = ["Queen (Q)", "Rook (R)", "Bishop (B)", "Knight (N)"];
@@ -57,14 +59,45 @@ function loadImages() {
 }
 
 function resizeCanvas() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  const width = document.documentElement.clientWidth;
+  const viewportHeight = window.innerHeight;
   dpr = Math.min(window.devicePixelRatio || 1, 2);
+  stackedLayout = width < 760;
+
+  if (stackedLayout) {
+    const sideMargin = Math.min(18, width * 0.04);
+    PANEL_X = sideMargin;
+    PANEL_WIDTH = width - sideMargin * 2;
+    TILE = Math.min(76, (width - sideMargin * 2) / 8,
+      Math.max(30, (viewportHeight - 455) / 8));
+    BOARD_SIZE = TILE * 8;
+    BOARD_X = (width - BOARD_SIZE) / 2;
+    BOARD_Y = 48;
+    PANEL_Y = BOARD_Y + BOARD_SIZE + 38;
+    LOGICAL_WIDTH = width;
+    LOGICAL_HEIGHT = Math.max(viewportHeight, PANEL_Y + 430);
+    scale = 1;
+    offsetX = 0;
+    offsetY = 0;
+  } else {
+    LOGICAL_WIDTH = 1088;
+    LOGICAL_HEIGHT = 760;
+    BOARD_X = 48;
+    BOARD_Y = 78;
+    TILE = 76;
+    BOARD_SIZE = TILE * 8;
+    PANEL_X = 700;
+    PANEL_WIDTH = 350;
+    PANEL_Y = 65;
+    scale = Math.min(width / LOGICAL_WIDTH, viewportHeight / LOGICAL_HEIGHT);
+    offsetX = (width - LOGICAL_WIDTH * scale) / 2;
+    offsetY = (viewportHeight - LOGICAL_HEIGHT * scale) / 2;
+  }
+
   canvas.width = Math.max(1, Math.round(width * dpr));
-  canvas.height = Math.max(1, Math.round(height * dpr));
-  scale = Math.min(width / LOGICAL_WIDTH, height / LOGICAL_HEIGHT);
-  offsetX = (width - LOGICAL_WIDTH * scale) / 2;
-  offsetY = (height - LOGICAL_HEIGHT * scale) / 2;
+  const canvasHeight = stackedLayout ? LOGICAL_HEIGHT : viewportHeight;
+  canvas.height = Math.max(1, Math.round(canvasHeight * dpr));
+  canvas.style.height = `${canvasHeight}px`;
 }
 
 function drawText(text, x, y, size, color, weight = 400) {
@@ -159,6 +192,58 @@ function drawBoard() {
 }
 
 function drawPanel() {
+  if (stackedLayout) {
+    const x = PANEL_X;
+    const width = PANEL_WIDTH;
+    const y = PANEL_Y;
+    drawText("C H E S S", x, y, 21, "#ebdbb8", 600);
+    if (width >= 360)
+      drawText("LOCAL TWO-PLAYER", x + width - 150, y + 5, 13, "#a7b3b8");
+
+    context.fillStyle = "#242b32";
+    context.fillRect(x, y + 32, width, 74);
+    if (state.status) {
+      drawText(state.status, x + 12, y + 43, 17, "#efcc81", 600);
+      drawText("Press F2 for a new game", x + 12, y + 76, 14, "#bec6c4");
+    } else {
+      drawText(state.turn === 0 ? "WHITE TO MOVE" : "BLACK TO MOVE",
+        x + 12, y + 43, 19, "#f1ede0", 600);
+      drawText(state.check ? "Check!" : "Select a piece, then a destination",
+        x + 12, y + 76, 13, state.check ? "#f58b7c" : "#b4bebc");
+    }
+
+    drawText("CAPTURED", x + 4, y + 116, 12, "#a5b2b1", 600);
+    for (let side = 0; side < 2; side += 1) {
+      for (let i = 0; i < state.captured[side].length; i += 1) {
+        const piece = (side === 0 ? 1 : -1) * state.captured[side][i];
+        drawPiece(piece, x + side * Math.floor(width / 2) + 4 + (i % 8) * 20,
+          y + 134 + Math.floor(i / 8) * 20, 19);
+      }
+    }
+
+    const historyY = y + 182;
+    context.fillStyle = "#20262c";
+    context.fillRect(x, historyY, width, 146);
+    drawText("MOVE HISTORY", x + 12, historyY + 9, 13, "#a5b2b1", 600);
+    const recent = state.history.slice(-8);
+    for (let i = 0; i < recent.length; i += 1) {
+      const half = i % 2;
+      const row = Math.floor(i / 2);
+      if (!half) drawText(`${Math.floor((state.history.length - recent.length + i) / 2) + 1}.`,
+        x + 12, historyY + 34 + row * 22, 13, "#819193");
+      drawText(recent[i], x + (half ? width * 0.57 : 48), historyY + 34 + row * 22,
+        14, "#e8e7db");
+    }
+
+    const buttonsY = historyY + 158;
+    const gap = 8;
+    const buttonWidth = (width - gap) / 2;
+    drawButton(x, buttonsY, buttonWidth, 42, "New game  F2");
+    drawButton(x + buttonWidth + gap, buttonsY, buttonWidth, 42, "Undo move  U");
+    drawButton(x, buttonsY + 50, width, 40, "Flip board  F", flipped);
+    return;
+  }
+
   drawText("C H E S S", BOARD_X, 24, 22, "#ebdbb8", 600);
   drawText("LOCAL TWO-PLAYER", PANEL_X, 29, 14, "#a7b3b8");
 
@@ -206,6 +291,26 @@ function drawPromotion() {
   if (!pendingPromotion) return;
   context.fillStyle = "rgba(10, 13, 17, 0.69)";
   context.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+  if (stackedLayout) {
+    const popupWidth = Math.min(330, LOGICAL_WIDTH - 24);
+    const popupX = (LOGICAL_WIDTH - popupWidth) / 2;
+    const popupY = BOARD_Y + BOARD_SIZE / 2 - 56;
+    const cellWidth = popupWidth / 4;
+    context.fillStyle = "#2b3239";
+    context.fillRect(popupX, popupY, popupWidth, 112);
+    context.strokeStyle = "#d8c28f";
+    context.lineWidth = 2;
+    context.strokeRect(popupX + 1, popupY + 1, popupWidth - 2, 110);
+    drawText("Choose promotion", popupX + 12, popupY + 10, 16, "#f5efdc", 600);
+    for (let i = 0; i < PROMOTIONS.length; i += 1) {
+      const piece = PROMOTIONS[i] * (state.turn === 0 ? 1 : -1);
+      drawPiece(piece, popupX + i * cellWidth + (cellWidth - 36) / 2,
+        popupY + 34, 36);
+      drawText(["Q", "R", "B", "N"][i], popupX + i * cellWidth + cellWidth / 2 - 4,
+        popupY + 76, 12, "#e8dfc8", 600);
+    }
+    return;
+  }
   const x = BOARD_X + BOARD_SIZE / 2 - 165;
   const y = BOARD_Y + BOARD_SIZE / 2 - 56;
   context.fillStyle = "#2b3239";
@@ -278,9 +383,21 @@ function handleBoardClick(x, y) {
 
 function handleClick(event) {
   const x = (event.clientX - offsetX) / scale;
-  const y = (event.clientY - offsetY) / scale;
+  const y = (event.clientY + window.scrollY - offsetY) / scale;
 
   if (pendingPromotion) {
+    if (stackedLayout) {
+      const popupWidth = Math.min(330, LOGICAL_WIDTH - 24);
+      const popupX = (LOGICAL_WIDTH - popupWidth) / 2;
+      const popupY = BOARD_Y + BOARD_SIZE / 2 - 56;
+      const cellWidth = popupWidth / 4;
+      if (y >= popupY + 30 && y < popupY + 112 &&
+          x >= popupX && x < popupX + popupWidth) {
+        const index = Math.floor((x - popupX) / cellWidth);
+        playSelectedPromotion(PROMOTIONS[index]);
+      }
+      return;
+    }
     for (let i = 0; i < 4; i += 1) {
       const left = BOARD_X + BOARD_SIZE / 2 - 132 + i * 66;
       if (x >= left && x < left + 66 &&
@@ -292,7 +409,17 @@ function handleClick(event) {
     return;
   }
 
-  if (x >= PANEL_X && x < PANEL_X + 160 && y >= 650 && y < 698) {
+  const newGameRect = stackedLayout
+    ? { x: PANEL_X, y: PANEL_Y + 340, w: (PANEL_WIDTH - 8) / 2, h: 42 }
+    : { x: PANEL_X, y: 650, w: 160, h: 48 };
+  const undoRect = stackedLayout
+    ? { x: PANEL_X + (PANEL_WIDTH + 8) / 2, y: PANEL_Y + 340, w: (PANEL_WIDTH - 8) / 2, h: 42 }
+    : { x: PANEL_X + 178, y: 650, w: PANEL_WIDTH - 178, h: 48 };
+  const flipRect = stackedLayout
+    ? { x: PANEL_X, y: PANEL_Y + 390, w: PANEL_WIDTH, h: 40 }
+    : { x: PANEL_X, y: 708, w: PANEL_WIDTH, h: 44 };
+  if (x >= newGameRect.x && x < newGameRect.x + newGameRect.w &&
+      y >= newGameRect.y && y < newGameRect.y + newGameRect.h) {
     module._chess_reset();
     selected = -1;
     pendingPromotion = null;
@@ -300,13 +427,15 @@ function handleClick(event) {
     update();
     return;
   }
-  if (x >= PANEL_X + 178 && x < PANEL_X + PANEL_WIDTH && y >= 650 && y < 698) {
+  if (x >= undoRect.x && x < undoRect.x + undoRect.w &&
+      y >= undoRect.y && y < undoRect.y + undoRect.h) {
     module._chess_undo();
     selected = -1;
     update();
     return;
   }
-  if (x >= PANEL_X && x < PANEL_X + PANEL_WIDTH && y >= 708 && y < 752) {
+  if (x >= flipRect.x && x < flipRect.x + flipRect.w &&
+      y >= flipRect.y && y < flipRect.y + flipRect.h) {
     flipped = !flipped;
     draw();
     return;

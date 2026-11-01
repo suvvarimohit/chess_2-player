@@ -677,8 +677,8 @@ void gui() {
   constexpr float panelX = 700.f, panelW = 350.f;
   const sf::Vector2u desktopSize = sf::VideoMode::getDesktopMode().size;
   const float initialScale = std::min(
-      {1.f, 0.9f * static_cast<float>(desktopSize.x) / layoutWidth,
-       0.9f * static_cast<float>(desktopSize.y) / layoutHeight});
+      {1.f, 0.94f * static_cast<float>(desktopSize.x) / layoutWidth,
+       0.94f * static_cast<float>(desktopSize.y) / layoutHeight});
   const sf::Vector2u initialSize{
       std::max(1u, static_cast<unsigned>(layoutWidth * initialScale)),
       std::max(1u, static_cast<unsigned>(layoutHeight * initialScale))};
