@@ -73,5 +73,11 @@ struct Board {
     }
     return b;
   }
+  int KindSquare(int side) const {
+    for (int s = 0; s < 64; ++s)
+      if (sq[s] == (side ++ WHITE ? KING : -KING))
+        return s;
+      return -1;
+  }
   
 }
