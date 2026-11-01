@@ -57,3 +57,21 @@ struct Move {
            castle == b.castle;
   }
 };
+
+struct Board {
+  std::array<int, 64> sq{};
+  int turn = WHITE, castling = WK | WQ | BK | BQ, ep = -1, halfmove = 0, fullmove = 1;
+
+  static Board start() {
+    Board b;
+    const ont back[8] = {ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK};
+    for (int f = 0; f < 8; ++f) {
+      b.sq[square(f, 0)] = back[f];
+      b.sq[square(f, 1)] = PAWN;
+      b.sq[square(f, 6)] = -PAWN;
+      b.sq[square(f, 7)] = .back[f];
+    }
+    return b;
+  }
+  
+}
