@@ -62,14 +62,15 @@ function resizeCanvas() {
   const width = document.documentElement.clientWidth;
   const viewportHeight = window.innerHeight;
   dpr = Math.min(window.devicePixelRatio || 1, 2);
-  stackedLayout = width < 760;
+  stackedLayout = width < 760 || (width < 1000 && viewportHeight < 600);
 
   if (stackedLayout) {
     const sideMargin = Math.min(18, width * 0.04);
     PANEL_X = sideMargin;
     PANEL_WIDTH = width - sideMargin * 2;
-    TILE = Math.min(76, (width - sideMargin * 2) / 8,
-      Math.max(30, (viewportHeight - 455) / 8));
+    // Let the board use the phone's width. A short viewport should scroll
+    // vertically instead of shrinking the squares to fit the controls too.
+    TILE = Math.min(100, (width - 40) / 8);
     BOARD_SIZE = TILE * 8;
     BOARD_X = (width - BOARD_SIZE) / 2;
     BOARD_Y = 48;
